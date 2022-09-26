@@ -40,23 +40,23 @@ Formato: IdMateria|Descripcion|Departamento
 
 Param(
     [ValidateScript({
-        if(-Not ($_ | Test-Path) ){
-            throw "Archivo o carpeta inexistente" 
-        }
-        if(-Not ($_ | Test-Path -PathType Leaf) ){
-            throw "Las rutas deben ser de archivos. Rutas de carpeta no se permiten"
-        }
-        return $true
-    })] [Parameter(Mandatory = $True)] [System.IO.FileInfo]$notas,
+            if (-Not ($_ | Test-Path) ) {
+                throw "Archivo o carpeta inexistente" 
+            }
+            if (-Not ($_ | Test-Path -PathType Leaf) ) {
+                throw "Las rutas deben ser de archivos. Rutas de carpeta no se permiten"
+            }
+            return $true
+        })] [Parameter(Mandatory = $True)] [System.IO.FileInfo]$notas,
     [ValidateScript({
-        if(-Not ($_ | Test-Path) ){
-            throw "Archivo inexistente" 
-        }
-        if(-Not ($_ | Test-Path -PathType Leaf) ){
-            throw "Las rutas deben ser de archivos. Rutas de carpeta no se permiten"
-        }
-        return $true
-    })] [Parameter(Mandatory = $True)] [System.IO.FileInfo]$materias
+            if (-Not ($_ | Test-Path) ) {
+                throw "Archivo inexistente" 
+            }
+            if (-Not ($_ | Test-Path -PathType Leaf) ) {
+                throw "Las rutas deben ser de archivos. Rutas de carpeta no se permiten"
+            }
+            return $true
+        })] [Parameter(Mandatory = $True)] [System.IO.FileInfo]$materias
 )
 
 # Inicializo las hash tables para contar el estado de las notas segun clave id de materia
@@ -70,20 +70,27 @@ $recursantes = @{ }
 # Dependiendo la condicion de las notas se suma uno a la hash table correspondiente segun el id de materia unico
 Import-CSV -Delimiter '|' -Path "$notas" | 
 ForEach-Object {
+    $FIN = $_.Final
     $P1 = $_.PrimerParcial
     $P2 = $_.SegundoParcial
     $REC = $_.Recuperatorio
 
-    if ( ($P1 -eq "" -and $P2 -eq "") -or ( ($P1 -eq "" -or $P2 -eq "") -and $REC -eq "" ) ) {
-        $abandonos[$_.IdMateria]++
+    if ($FIN -eq "") {
+        if ( ($P1 -eq "" -and $P2 -eq "") -or ( ($P1 -eq "" -or $P2 -eq "") -and $REC -eq "" ) ) {
+            $abandonos[$_.IdMateria]++
+        }
+        elseif ( ( $P1 -ge 7 -and ($REC -gt 7 -or ($P2 -ge 7 -and $REC -eq "")) ) -or ( ($P1 -ge 4 -and $P1 -lt 7) -and ($P2 -ge 7 -and $REC -ge 7) ) -or ( $P1 -lt 4 -and ($P2 -ge 7 -and $REC -ge 7) ) ) {
+            $promocionados[$_.IdMateria]++
+        }
+        elseif ( ( ($P1 -ge 7 -and ( ($REC -ge 4 -and $REC -lt 7) -or ($P2 -ge 4 -and $P2 -lt 7 -and $REC -eq ""))) ) -or ( ($P1 -ge 4 -and $P1 -lt 7) -and (($REC -ge 4 -and $REC -lt 7) -or ($P2 -ge 7 -and $REC -eq "") -or ($P2 -ge 4 -and $P2 -lt 7 -and ($REC -ge 4 -or $REC -eq "")) -or ($P2 -lt 4 -and $REC -ge 4)) ) -or ( $P1 -lt 4 -and (($P2 -ge 7 -and $REC -ge 4 -and $REC -lt 7) -or (($P2 -ge 4 -and $P2 -lt 7) -and ($REC -ge 4 -and $REC -lt 7))) ) ) {
+            $finales[$_.IdMateria]++
+        }
+        elseif ( ( $P1 -ge 4 -and $REC -lt 4 ) -or ( $P1 -lt 4 -and ($REC -lt 4 -or $P2 -lt 4)  ) ) {
+            $recursantes[$_.IdMateria]++
+        }
+        
     }
-    elseif ( ( $P1 -ge 7 -and ($REC -gt 7 -or ($P2 -ge 7 -and $REC -eq "")) ) -or ( ($P1 -ge 4 -and $P1 -lt 7) -and ($P2 -ge 7 -and $REC -ge 7) ) -or ( $P1 -lt 4 -and ($P2 -ge 7 -and $REC -ge 7) ) ) {
-        $promocionados[$_.IdMateria]++
-    }
-    elseif ( ( ($P1 -ge 7 -and ( ($REC -ge 4 -and $REC -lt 7) -or ($P2 -ge 4 -and $P2 -lt 7 -and $REC -eq ""))) ) -or ( ($P1 -ge 4 -and $P1 -lt 7) -and (($REC -ge 4 -and $REC -lt 7) -or ($P2 -ge 7 -and $REC -eq "") -or ($P2 -ge 4 -and $P2 -lt 7 -and ($REC -ge 4 -or $REC -eq "")) -or ($P2 -lt 4 -and $REC -ge 4)) ) -or ( $P1 -lt 4 -and (($P2 -ge 7 -and $REC -ge 4 -and $REC -lt 7) -or (($P2 -ge 4 -and $P2 -lt 7) -and ($REC -ge 4 -and $REC -lt 7))) ) ) {
-        $finales[$_.IdMateria]++
-    }
-    elseif ( ( $P1 -ge 4 -and $REC -lt 4 ) -or ( $P1 -lt 4 -and ($REC -lt 4 -or $P2 -lt 4)  ) ) {
+    elseif ($FIN -lt 4) {
         $recursantes[$_.IdMateria]++
     }
 }
